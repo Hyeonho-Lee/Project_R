@@ -28,6 +28,7 @@ public class PlayerMovement : MonoBehaviour {
 
     public Vector3 movement;
     public Vector3 player_dir;
+    public Vector3 player_forward;
     private Vector3 dir_forward, dir_f_right, dir_right, dir_b_right, dir_back, dir_b_left, dir_left, dir_f_left;
     public RaycastHit ground_hit;
 
@@ -41,9 +42,9 @@ public class PlayerMovement : MonoBehaviour {
 
     void Start() {
         player_speed = 10.0f;
-        player_dash_speed = 10.0f;
+        player_dash_speed = 5.0f;
         player_jump = 14.0f;
-        roll_speed = 0.5f;
+        roll_speed = 3.0f;
         ground_height = 1.75f;
         rotation_speed = 10.0f;
         roll_wait = 0.0f;
@@ -105,6 +106,8 @@ public class PlayerMovement : MonoBehaviour {
         if (is_timer && ((Time.time - roll_wait) > roll_time)) {
             is_timer = false;
         }
+
+        Check_Forward();
     }
 
     void Move(float h, float v) {
@@ -123,59 +126,45 @@ public class PlayerMovement : MonoBehaviour {
         // 앞오
         if ((movement.z > 0 && movement.z <= 1) && (movement.x > 0 && movement.x <= 1)) {
             Move_Vector(dir_f_right);
-            //if (is_roll)
-                //StartCoroutine(AddImpact(dir_f_right, roll_speed));
-            //AddImpact(dir_f_right, roll_speed);
         }
 
         // 앞왼
         if ((movement.z > 0 && movement.z <= 1) && (movement.x < 0 && movement.x >= -1)) {
             Move_Vector(dir_f_left);
-            //if (is_roll)
-                //AddImpact(dir_f_left, roll_speed);
         }
 
         // 뒤왼
         if ((movement.z < 0 && movement.z >= -1) && (movement.x < 0 && movement.x >= -1)) {
             Move_Vector(dir_b_left);
-            //if (is_roll)
-                //AddImpact(dir_b_left, roll_speed);
         }
 
         // 뒤오
         if ((movement.z < 0 && movement.z >= -1) && (movement.x > 0 && movement.x <= 1)) {
             Move_Vector(dir_b_right);
-            //if (is_roll)
-                //StartCoroutine(AddImpact(dir_f_right, roll_speed));
-            //AddImpact(dir_b_right, roll_speed);
         }
 
         // 앞
         if ((movement.z > 0 && movement.z <= 1) && (movement.x == 0)) {
             Move_Vector(dir_forward);
-            //if (is_roll)
-            //AddImpact(dir_forward, roll_speed);
         }
 
         // 뒤
         if ((movement.z < 0 && movement.z >= -1) && (movement.x == 0)) {
             Move_Vector(dir_back);
-            //if (is_roll)
-                //AddImpact(dir_back, roll_speed);
         }
 
         // 오
         if ((movement.x > 0 && movement.x <= 1) && (movement.z == 0)) {
             Move_Vector(dir_right);
-            //if (is_roll)
-                //AddImpact(dir_right, roll_speed);
         }
 
         // 왼
         if ((movement.x < 0 && movement.x >= -1) && (movement.z == 0)) {
             Move_Vector(dir_left);
-            //if (is_roll)
-                //AddImpact(dir_left, roll_speed);
+        }
+
+        if (is_roll) {
+            AddImpact(player_forward, roll_speed);
         }
     }
 
@@ -191,10 +180,7 @@ public class PlayerMovement : MonoBehaviour {
     }
 
     void AddImpact(Vector3 dir, float force) {
-        //rigidbody.AddForce(dir * force, ForceMode.Impulse);
-        //this.transform.position += dir * force;
-        //rigidbody.velocity = dir * force;
-        this.transform.position += dir * 5f;
+        transform.position = Vector3.Lerp(transform.position, transform.position + dir * force, Time.deltaTime * 5f);
     }
 
     IEnumerator Roll() {
@@ -217,5 +203,14 @@ public class PlayerMovement : MonoBehaviour {
         }else {
             is_ground = false;
         }
+    }
+
+    void Check_Forward() {
+        if (!is_ground) {
+            player_forward = transform.forward;
+            return;
+        }
+
+        player_forward = Vector3.Cross(transform.right, ground_hit.normal);
     }
 }

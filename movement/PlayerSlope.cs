@@ -27,7 +27,7 @@ public class PlayerSlope : MonoBehaviour {
 
     void Start() {
         slope_weight = 1f;
-        slope_height = 1.35f;
+        slope_height = 0.9f;
         slope_padding = 0.05f;
         max_ground_angle = 120f;
         is_wall = false;
@@ -35,11 +35,11 @@ public class PlayerSlope : MonoBehaviour {
 
     void FixedUpdate() {
         Check_Slope();
-        Check_Forward();
         Check_GroundAngle();
     }
 
     void Check_Slope() {
+        forward = playermovement.player_forward;
         is_ground = playermovement.is_ground;
         ground_hit = playermovement.ground_hit;
 
@@ -64,15 +64,6 @@ public class PlayerSlope : MonoBehaviour {
                 transform.position = Vector3.Lerp(transform.position, transform.position + Vector3.up * 3, 5 * Time.deltaTime);
             }
         }
-    }
-
-    void Check_Forward() {
-        if (!is_ground) {
-            forward = transform.forward;
-            return;
-        }
-
-        forward = Vector3.Cross(transform.right, ground_hit.normal);
     }
 
     void Check_GroundAngle() {
