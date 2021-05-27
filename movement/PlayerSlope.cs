@@ -4,18 +4,20 @@ using UnityEngine;
 
 public class PlayerSlope : MonoBehaviour {
     [Header("PlayerSlope Status")]
-    public float slope_weight;
-    public float slope_height;
-    public float slope_padding;
     public float max_ground_angle;
+    private float slope_weight;
+    private float slope_height;
+    private float slope_padding;
 
-    public bool is_ground;
+    private bool is_ground;
+    private bool is_wall;
 
     public float ground_angle;
     private Vector3 forward;
     private Vector3 slope_transform;
     private RaycastHit ground_hit;
     private RaycastHit forward_hit;
+    private RaycastHit transform_hit;
 
     PlayerMovement playermovement;
 
@@ -24,14 +26,11 @@ public class PlayerSlope : MonoBehaviour {
     }
 
     void Start() {
-        slope_weight = 5f;
-        slope_height = 0.7f;
+        slope_weight = 1f;
+        slope_height = 1.35f;
         slope_padding = 0.05f;
         max_ground_angle = 120f;
-    }
-
-    void Update() {
-        //Check_Slope();
+        is_wall = false;
     }
 
     void FixedUpdate() {
@@ -43,13 +42,26 @@ public class PlayerSlope : MonoBehaviour {
     void Check_Slope() {
         is_ground = playermovement.is_ground;
         ground_hit = playermovement.ground_hit;
+
+        if(playermovement.movement.z == 0 && playermovement.movement.x == 0) {
+            slope_weight = 0f;
+        }else {
+            slope_weight = 1f;
+        }
+
         slope_transform = new Vector3(transform.position.x, transform.position.y - slope_height, transform.position.z);
+        Debug.DrawLine(slope_transform, slope_transform + (forward * slope_weight), Color.blue);
         Debug.DrawLine(transform.position, transform.position + (forward * slope_weight), Color.blue);
 
-        if(Physics.Raycast(slope_transform, forward, out forward_hit, slope_weight)) {
-            if(Vector3.Distance(slope_transform, forward_hit.point) < 3) {
-                Debug.Log(Vector3.Distance(slope_transform, forward_hit.point));
-                //transform.position = Vector3.Lerp(transform.position, transform.position + Vector3.up * 3, 5 * Time.deltaTime);
+        if (Physics.Raycast(transform.position, forward, out transform_hit, slope_weight)) {
+            is_wall = true;
+        }else {
+            is_wall = false;
+        }
+
+        if (Physics.Raycast(slope_transform, forward, out forward_hit, slope_weight)) {
+            if(Vector3.Distance(slope_transform, forward_hit.point) < slope_weight && is_wall == false) {
+                transform.position = Vector3.Lerp(transform.position, transform.position + Vector3.up * 3, 5 * Time.deltaTime);
             }
         }
     }

@@ -42,7 +42,7 @@ public class PlayerMovement : MonoBehaviour {
     void Start() {
         player_speed = 10.0f;
         player_dash_speed = 10.0f;
-        player_jump = 7.0f;
+        player_jump = 14.0f;
         roll_speed = 0.5f;
         ground_height = 1.75f;
         rotation_speed = 10.0f;
@@ -123,57 +123,59 @@ public class PlayerMovement : MonoBehaviour {
         // 앞오
         if ((movement.z > 0 && movement.z <= 1) && (movement.x > 0 && movement.x <= 1)) {
             Move_Vector(dir_f_right);
-            if (is_roll)
-                AddImpact(dir_f_right, roll_speed);
+            //if (is_roll)
+                //StartCoroutine(AddImpact(dir_f_right, roll_speed));
+            //AddImpact(dir_f_right, roll_speed);
         }
 
         // 앞왼
         if ((movement.z > 0 && movement.z <= 1) && (movement.x < 0 && movement.x >= -1)) {
             Move_Vector(dir_f_left);
-            if (is_roll)
-                AddImpact(dir_f_left, roll_speed);
+            //if (is_roll)
+                //AddImpact(dir_f_left, roll_speed);
         }
 
         // 뒤왼
         if ((movement.z < 0 && movement.z >= -1) && (movement.x < 0 && movement.x >= -1)) {
             Move_Vector(dir_b_left);
-            if (is_roll)
-                AddImpact(dir_b_left, roll_speed);
+            //if (is_roll)
+                //AddImpact(dir_b_left, roll_speed);
         }
 
         // 뒤오
         if ((movement.z < 0 && movement.z >= -1) && (movement.x > 0 && movement.x <= 1)) {
             Move_Vector(dir_b_right);
-            if (is_roll)
-                AddImpact(dir_b_right, roll_speed);
+            //if (is_roll)
+                //StartCoroutine(AddImpact(dir_f_right, roll_speed));
+            //AddImpact(dir_b_right, roll_speed);
         }
 
         // 앞
         if ((movement.z > 0 && movement.z <= 1) && (movement.x == 0)) {
             Move_Vector(dir_forward);
-            if (is_roll)
-                AddImpact(dir_forward, roll_speed);
+            //if (is_roll)
+            //AddImpact(dir_forward, roll_speed);
         }
 
         // 뒤
         if ((movement.z < 0 && movement.z >= -1) && (movement.x == 0)) {
             Move_Vector(dir_back);
-            if (is_roll)
-                AddImpact(dir_back, roll_speed);
+            //if (is_roll)
+                //AddImpact(dir_back, roll_speed);
         }
 
         // 오
         if ((movement.x > 0 && movement.x <= 1) && (movement.z == 0)) {
             Move_Vector(dir_right);
-            if (is_roll)
-                AddImpact(dir_right, roll_speed);
+            //if (is_roll)
+                //AddImpact(dir_right, roll_speed);
         }
 
         // 왼
         if ((movement.x < 0 && movement.x >= -1) && (movement.z == 0)) {
             Move_Vector(dir_left);
-            if (is_roll)
-                AddImpact(dir_left, roll_speed);
+            //if (is_roll)
+                //AddImpact(dir_left, roll_speed);
         }
     }
 
@@ -190,7 +192,9 @@ public class PlayerMovement : MonoBehaviour {
 
     void AddImpact(Vector3 dir, float force) {
         //rigidbody.AddForce(dir * force, ForceMode.Impulse);
-        this.transform.position += dir * force;
+        //this.transform.position += dir * force;
+        //rigidbody.velocity = dir * force;
+        this.transform.position += dir * 5f;
     }
 
     IEnumerator Roll() {
