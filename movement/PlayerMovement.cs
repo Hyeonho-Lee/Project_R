@@ -45,7 +45,7 @@ public class PlayerMovement : MonoBehaviour {
         player_dash_speed = 5.0f;
         player_jump = 14.0f;
         roll_speed = 3.0f;
-        ground_height = 1.75f;
+        ground_height = 1.25f;
         rotation_speed = 10.0f;
         roll_wait = 0.0f;
         roll_time = 0.3f;

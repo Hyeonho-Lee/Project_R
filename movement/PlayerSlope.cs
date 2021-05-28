@@ -5,14 +5,14 @@ using UnityEngine;
 public class PlayerSlope : MonoBehaviour {
     [Header("PlayerSlope Status")]
     public float max_ground_angle;
+    public float slope_height;
+
     private float slope_weight;
-    private float slope_height;
-    private float slope_padding;
+    public float ground_angle;
 
     private bool is_ground;
     private bool is_wall;
 
-    public float ground_angle;
     private Vector3 forward;
     private Vector3 slope_transform;
     private RaycastHit ground_hit;
@@ -26,10 +26,8 @@ public class PlayerSlope : MonoBehaviour {
     }
 
     void Start() {
-        slope_weight = 1f;
-        slope_height = 0.9f;
-        slope_padding = 0.05f;
-        max_ground_angle = 120f;
+        slope_height = 0.55f;
+        max_ground_angle = 120.0f;
         is_wall = false;
     }
 
@@ -46,7 +44,7 @@ public class PlayerSlope : MonoBehaviour {
         if(playermovement.movement.z == 0 && playermovement.movement.x == 0) {
             slope_weight = 0f;
         }else {
-            slope_weight = 1f;
+            slope_weight = 0.8f;
         }
 
         slope_transform = new Vector3(transform.position.x, transform.position.y - slope_height, transform.position.z);
@@ -61,7 +59,7 @@ public class PlayerSlope : MonoBehaviour {
 
         if (Physics.Raycast(slope_transform, forward, out forward_hit, slope_weight)) {
             if(Vector3.Distance(slope_transform, forward_hit.point) < slope_weight && is_wall == false) {
-                transform.position = Vector3.Lerp(transform.position, transform.position + Vector3.up * 3, 5 * Time.deltaTime);
+                transform.position = Vector3.Lerp(transform.position, transform.position + Vector3.up * 3, Time.deltaTime * 3f);
             }
         }
     }
