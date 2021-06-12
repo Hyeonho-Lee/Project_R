@@ -1,88 +1,102 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour {
-    [Header("PlayerMovement Status")]
-    public float player_speed;
-    public float player_dash_speed;
-    public float player_jump;
-    public float rotation_speed;
-    public float roll_speed;
 
-    private float move_speed;
     private float horizontal;
     private float vertical;
-    private float roll_wait;
+
+    public float mass;
+    public float jump_speed;
+    public float walk_speed;
+    public float dash_speed;
+    public float move_speed;
+    public float velocity;
+    public float roll_wait;
     public float roll_time;
-    public float ground_height;
+    public float roll_speed;
 
-    [Header("PlayerMovement Check")]
-    public bool is_jump;
-    public bool is_dash;
-    public bool is_roll;
-    public bool is_ctrl;
     public bool is_ground;
+    public bool is_roll;
+    public bool is_timer;
+    public bool is_dash;
+    public bool is_ctrl;
+    public float ground_height;
+    public float ground_range;
 
-    private bool is_timer;
+    public LayerMask ground_hit;
 
     public Vector3 movement;
     public Vector3 player_dir;
     public Vector3 player_forward;
+    public Vector3 impact;
     private Vector3 dir_forward, dir_f_right, dir_right, dir_b_right, dir_back, dir_b_left, dir_left, dir_f_left;
-    public RaycastHit ground_hit;
 
-    new Rigidbody rigidbody;
+    CharacterController cc;
     TPSCamera tpscamera;
 
     void Awake() {
-        rigidbody = GetComponent<Rigidbody>();
+        cc = GetComponent<CharacterController>();
         tpscamera = GameObject.Find("TPS_Camera").GetComponent<TPSCamera>();
     }
 
     void Start() {
-        player_speed = 10.0f;
-        player_dash_speed = 5.0f;
-        player_jump = 14.0f;
-        roll_speed = 3.0f;
-        ground_height = 1.25f;
-        rotation_speed = 10.0f;
+        mass = 1.0f;
+        jump_speed = 1.2f;
+        walk_speed = 5.0f;
+        dash_speed = 5.0f;
+        velocity = 0.0f;
+        ground_height = -0.08f;
+        ground_range = 0.28f;
         roll_wait = 0.0f;
         roll_time = 0.3f;
-
-        move_speed = player_speed;
+        roll_speed = 30.0f;
+        impact = Vector3.zero;
     }
 
     void Update() {
-        horizontal = Input.GetAxisRaw("Horizontal");
-        vertical = Input.GetAxisRaw("Vertical");
-        player_dir = tpscamera.player_dir.normalized;
-
-        Input_Key();
+        Check_Input();
+        Check_Ground();
         Check_Value();
     }
 
     void FixedUpdate() {
-        Move(horizontal, vertical);
-        Check_Ground(ground_height);
+        Move();
     }
 
-    void Input_Key() {
-        if (Input.GetKeyDown(KeyCode.Space))
-            is_jump = true;
+    void OnDrawGizmos() {
+        Color green = new Color(0.0f, 1.0f, 0.0f, 0.5f);
+        Color red = new Color(1.0f, 0.0f, 0.0f, 0.5f);
+
+        if (is_ground)
+            Gizmos.color = green;
+        else
+            Gizmos.color = red;
+
+        Gizmos.DrawSphere(transform.position - new Vector3(0, ground_height, 0), ground_range);
+    }
+
+    void Check_Input() {
+        horizontal = Input.GetAxis("Horizontal");
+        vertical = Input.GetAxis("Vertical");
+        player_dir = tpscamera.player_dir.normalized;
 
         if (Input.GetKeyDown(KeyCode.LeftShift)) {
             is_dash = true;
             if (!is_timer) {
                 roll_wait = Time.time;
                 is_timer = true;
-            }else if (is_timer && ((Time.time - roll_wait) < roll_time)) {
+            } else if (is_timer && ((Time.time - roll_wait) < roll_time)) {
                 StartCoroutine(Roll());
             }
         }
 
         if (Input.GetKeyUp(KeyCode.LeftShift))
             is_dash = false;
+
+        if (Input.GetKeyDown(KeyCode.Space) && is_ground)
+            StartCoroutine(Jump());
 
         if (Input.GetKeyDown(KeyCode.LeftControl))
             is_ctrl = true;
@@ -92,26 +106,31 @@ public class PlayerMovement : MonoBehaviour {
     }
 
     void Check_Value() {
-        if (is_jump && is_ground)
-            Jump(player_jump);
+        if (is_ground) {
+            if (velocity < 0.0f) {
+                velocity = -2.0f;
+            }
+        } else {
+            if (velocity < 53.0f) {
+                velocity += -15.0f * Time.deltaTime;
+            }
+        }
 
         if (is_dash)
-            move_speed = player_speed + player_dash_speed;
+            move_speed = walk_speed + dash_speed;
         else
-            move_speed = player_speed;
+            move_speed = walk_speed;
 
         if (is_ctrl)
-            move_speed = player_speed / 2;
+            move_speed = move_speed / 2;
 
         if (is_timer && ((Time.time - roll_wait) > roll_time)) {
             is_timer = false;
         }
-
-        Check_Forward();
     }
 
-    void Move(float h, float v) {
-        movement.Set(h, 0, v);
+    void Move() {
+        movement.Set(horizontal, 0, vertical);
         movement = movement.normalized;
 
         dir_forward = Quaternion.Euler(0f, 0f, 0f) * player_dir;
@@ -123,94 +142,127 @@ public class PlayerMovement : MonoBehaviour {
         dir_left = Quaternion.Euler(0f, 270f, 0f) * player_dir;
         dir_f_left = Quaternion.Euler(0f, 315f, 0f) * player_dir;
 
+        if (movement.z == 0 && movement.x == 0) {
+            if (is_roll) {
+                StartCoroutine(Add_Impact(transform.forward, roll_speed));
+                is_roll = false;
+            }else {
+                cc.Move(movement * (walk_speed * Time.deltaTime) + new Vector3(0.0f, velocity, 0.0f) * Time.deltaTime);
+            }
+        }
+
         // 앞오
         if ((movement.z > 0 && movement.z <= 1) && (movement.x > 0 && movement.x <= 1)) {
-            Move_Vector(dir_f_right);
+            if (is_roll) {
+                StartCoroutine(Add_Impact(dir_f_right, roll_speed));
+                is_roll = false;
+            }else {
+                Move_Vector(dir_f_right, dir_f_right);
+            }
         }
 
         // 앞왼
         if ((movement.z > 0 && movement.z <= 1) && (movement.x < 0 && movement.x >= -1)) {
-            Move_Vector(dir_f_left);
+            if (is_roll) {
+                StartCoroutine(Add_Impact(dir_f_left, roll_speed));
+                is_roll = false;
+            }else {
+                Move_Vector(dir_f_left, dir_f_left);
+            }
         }
 
         // 뒤왼
         if ((movement.z < 0 && movement.z >= -1) && (movement.x < 0 && movement.x >= -1)) {
-            Move_Vector(dir_b_left);
+            if (is_roll) {
+                StartCoroutine(Add_Impact(dir_b_left, roll_speed));
+                is_roll = false;
+            }else {
+                Move_Vector(dir_b_left, dir_b_left);
+            }
         }
 
         // 뒤오
         if ((movement.z < 0 && movement.z >= -1) && (movement.x > 0 && movement.x <= 1)) {
-            Move_Vector(dir_b_right);
+            if (is_roll) {
+                StartCoroutine(Add_Impact(dir_b_right, roll_speed));
+                is_roll = false;
+            }else {
+                Move_Vector(dir_b_right, dir_b_right);
+            }
         }
 
         // 앞
         if ((movement.z > 0 && movement.z <= 1) && (movement.x == 0)) {
-            Move_Vector(dir_forward);
+            if (is_roll) {
+                StartCoroutine(Add_Impact(dir_forward, roll_speed));
+                is_roll = false;
+            }else {
+                Move_Vector(dir_forward, dir_forward);
+            }
         }
 
         // 뒤
         if ((movement.z < 0 && movement.z >= -1) && (movement.x == 0)) {
-            Move_Vector(dir_back);
+            if (is_roll) {
+                StartCoroutine(Add_Impact(dir_back, roll_speed));
+                is_roll = false;
+            }else {
+                Move_Vector(dir_back, dir_back);
+            }
         }
 
         // 오
         if ((movement.x > 0 && movement.x <= 1) && (movement.z == 0)) {
-            Move_Vector(dir_right);
+            if (is_roll) {
+                StartCoroutine(Add_Impact(dir_right, roll_speed));
+                is_roll = false;
+            }else {
+                Move_Vector(dir_right, dir_right);
+            }
         }
 
         // 왼
         if ((movement.x < 0 && movement.x >= -1) && (movement.z == 0)) {
-            Move_Vector(dir_left);
+            if (is_roll) {
+                StartCoroutine(Add_Impact(dir_left, roll_speed));
+                is_roll = false;
+            }else {
+                Move_Vector(dir_left, dir_left);
+            }
         }
 
-        if (is_roll) {
-            AddImpact(player_forward, roll_speed);
-        }
+        if (impact.magnitude > 0.2)
+            cc.Move(impact * Time.deltaTime);
+        impact = Vector3.Lerp(impact, Vector3.zero, 5 * Time.deltaTime);
     }
 
-    void Move_Vector(Vector3 input_vector) {
-        Quaternion newRotation = Quaternion.LookRotation(input_vector);
-        this.transform.rotation = Quaternion.Slerp(this.transform.rotation, newRotation, rotation_speed * Time.deltaTime);
-        rigidbody.MovePosition(this.transform.position + input_vector * move_speed * Time.deltaTime);
+    void Move_Vector(Vector3 input_vector, Vector3 rotate_vector) {
+        Quaternion newRotation = Quaternion.LookRotation(rotate_vector);
+        this.transform.rotation = Quaternion.Slerp(this.transform.rotation, newRotation, 10.0f * Time.deltaTime);
+        cc.Move(input_vector * (move_speed * Time.deltaTime) + new Vector3(0.0f, velocity, 0.0f) * Time.deltaTime);
     }
 
-    void Jump(float speed) {
-        rigidbody.AddForce(Vector3.up * speed, ForceMode.Impulse);
-        is_jump = false;
-    }
-
-    void AddImpact(Vector3 dir, float force) {
-        transform.position = Vector3.Lerp(transform.position, transform.position + dir * force, Time.deltaTime * 5f);
+    IEnumerator Jump() {
+        velocity = Mathf.Sqrt(jump_speed * -2f * -15.0f);
+        yield return 0;
     }
 
     IEnumerator Roll() {
         is_roll = true;
-        //this_am.SetBool("rolling", true);
-        //GameObject.Find("Player").GetComponent<PlayerStatus>().stamina -= 20f;
         yield return new WaitForSeconds(0.5f);
         is_roll = false;
-        //this_am.SetBool("rolling", false);
     }
 
-    void Check_Ground(float height) {
-        Debug.DrawRay(this.transform.position, Vector3.down * height, Color.red);
-
-        if (Physics.Raycast(transform.position, Vector3.down, out ground_hit, height)) {
-            if(ground_hit.transform.tag == "Ground") {
-                is_ground = true;
-                return;
-            }
-        }else {
-            is_ground = false;
-        }
+    void Check_Ground() {
+        Vector3 ground_pos = transform.position - new Vector3(0, ground_height, 0);
+        is_ground = Physics.CheckSphere(ground_pos, ground_range, ground_hit, QueryTriggerInteraction.Ignore);
     }
 
-    void Check_Forward() {
-        if (!is_ground) {
-            player_forward = transform.forward;
-            return;
-        }
-
-        player_forward = Vector3.Cross(transform.right, ground_hit.normal);
+    IEnumerator Add_Impact(Vector3 dir, float force) {
+        dir.Normalize();
+        if (dir.y < 0)
+            dir.y = -dir.y;
+        impact += dir.normalized * force / mass;
+        yield return 0;
     }
 }
